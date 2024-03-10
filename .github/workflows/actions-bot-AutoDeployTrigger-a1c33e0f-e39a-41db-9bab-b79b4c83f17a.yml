@@ -1,4 +1,4 @@
-name: Trigger auto deployment for actions-bot
+name: Deploy Actions Bot
 
 on:
   push:
@@ -11,6 +11,7 @@ on:
 
 jobs:
   build-and-deploy:
+    name: Build and Deploy
     runs-on: ubuntu-latest
     permissions: 
       id-token: write
@@ -26,7 +27,7 @@ jobs:
           tenant-id: ${{ secrets.ACTIONSBOT_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.ACTIONSBOT_AZURE_SUBSCRIPTION_ID }}
 
-      - name: Build and push container image to registry
+      - name: Build and Deploy App
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }} 
