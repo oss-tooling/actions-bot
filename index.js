@@ -143,7 +143,6 @@ app.get('/', (req, res) => {
 })
 
 app.get('/healthz', (req, res) => {
-    console.log('Health check: OK')
     res.send('OK')
 })
 
