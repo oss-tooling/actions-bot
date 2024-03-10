@@ -114,20 +114,19 @@ octokit.webhooks.on('issue_comment.created', async ({octokit, payload}) => {
         const issueNumber = payload.issue.number
         const actor = payload.comment.user.login
         const metadata = `${actor}:${owner}:${repo}:${issueNumber}:${payload.comment.id}`
-        if (payload.pull_request == null) {
-            console.log(`[${metadata}] Not a pull request comment`)
-            return
-        }
-
-        console.log(`[${metadata}] Received command: '${body}' from ${actor}`)
-        if (body.startsWith('/actions-bot')) {
-            console.log(`[${metadata}] Processing command`)
-            if (body.includes('rerun-required-workflows')) {
-                console.log(`[${metadata}] Processing rerun-required-workflows`)
-                await processRerunRequiredWorkflows(octokit, body, owner, repo, issueNumber, actor, metadata)
-            } else {
-                console.log(`[${metadata}] Unknown command`)
+        if (payload.issue.pull_request) {
+            console.log(`[${metadata}] Received command: '${body}' from ${actor}`)
+            if (body.startsWith('/actions-bot')) {
+                console.log(`[${metadata}] Processing command`)
+                if (body.includes('rerun-required-workflows')) {
+                    console.log(`[${metadata}] Processing rerun-required-workflows`)
+                    await processRerunRequiredWorkflows(octokit, body, owner, repo, issueNumber, actor, metadata)
+                } else {
+                    console.log(`[${metadata}] Unknown command`)
+                }
             }
+        } else {
+            console.log(`[${metadata}] Issue is not a pull request`)
         }
     } catch (e) {
         console.log(`Error: ${e.message}`)
