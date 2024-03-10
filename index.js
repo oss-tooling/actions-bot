@@ -114,6 +114,11 @@ octokit.webhooks.on('issue_comment.created', async ({octokit, payload}) => {
         const issueNumber = payload.issue.number
         const actor = payload.comment.user.login
         const metadata = `${actor}:${owner}:${repo}:${issueNumber}:${payload.comment.id}`
+        if (payload.pull_request == null) {
+            console.log(`[${metadata}] Not a pull request comment`)
+            return
+        }
+
         console.log(`[${metadata}] Received command: '${body}' from ${actor}`)
         if (body.startsWith('/actions-bot')) {
             console.log(`[${metadata}] Processing command`)
