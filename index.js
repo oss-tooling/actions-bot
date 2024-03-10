@@ -5,7 +5,7 @@ import {paginateRest} from '@octokit/plugin-paginate-rest'
 import {throttling} from '@octokit/plugin-throttling'
 import {retry} from '@octokit/plugin-retry'
 
-const port = process.env.OSST_ACTIONS_BOT_PORT || process.env.PORT || 3000
+const port = process.env.OSST_ACTIONS_BOT_PORT || process.env.PORT || 8080
 const appID = process.env.OSST_ACTIONS_BOT_APP_ID
 const appPrivateKey = Buffer.from(process.env.OSST_ACTIONS_BOT_APP_PRIVATE_KEY, 'base64').toString('utf-8')
 const appSecret = process.env.OSST_ACTIONS_BOT_APP_WEBHOOK_SECRET
