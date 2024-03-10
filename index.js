@@ -133,6 +133,11 @@ app.get('/', (req, res) => {
     res.send('OK')
 })
 
+app.get('/healthz', (req, res) => {
+    console.log('Health check: OK')
+    res.send('OK')
+})
+
 const main = async () => {
     app.listen(port, () => {
         console.log(`Server is running on port ${port}`)
