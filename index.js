@@ -127,6 +127,10 @@ octokit.webhooks.on('issue_comment.created', async ({octokit, payload}) => {
     }
 })
 
+app.get('/', (req, res) => {
+    res.send('OK')
+})
+
 const main = async () => {
     app.listen(port, () => {
         console.log(`Server is running on port ${port}`)
