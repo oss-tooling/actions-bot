@@ -1,41 +1,30 @@
 import express from 'express'
-import {Octokit} from '@octokit/core'
-import {App, createNodeMiddleware} from '@octokit/app'
-import {paginateRest} from '@octokit/plugin-paginate-rest'
-import {throttling} from '@octokit/plugin-throttling'
-import {retry} from '@octokit/plugin-retry'
+import {App, createNodeMiddleware, Octokit} from 'octokit'
 
 const port = process.env.OSST_ACTIONS_BOT_PORT || process.env.PORT || 8080
 const appID = process.env.OSST_ACTIONS_BOT_APP_ID
 const appPrivateKey = Buffer.from(process.env.OSST_ACTIONS_BOT_APP_PRIVATE_KEY, 'base64').toString('utf-8')
 const appSecret = process.env.OSST_ACTIONS_BOT_APP_WEBHOOK_SECRET
-const requiredChecks = [
-    'policy-enforce-pr',
-    'policy-enforce-pr-2'
-]
-const _Octokit = Octokit.plugin(paginateRest, retry, throttling).defaults({
-    userAgent: 'oss-tooling-actions-bot/v1.0.0',
-    throttle: {
-        onRateLimit: (retryAfter, options) => {
-            if (options.request.retryCount === 0) {
-                console.log(`Request quota exhausted for request ${options.url}`)
-                return true
-            }
-        },
-        onSecondaryRateLimit: (retryAfter, options) => {
-            console.log(`Abuse detected for request ${options.url}`)
-            return true
-        }
-    }
-})
+
 const octokit = new App({
     appId: appID,
     privateKey: appPrivateKey,
-    Octokit: _Octokit,
-    oauth: {
-        clientId: "",
-        clientSecret: ""
-    },
+    Octokit: Octokit.defaults({
+        userAgent: 'oss-tooling-actions-bot/v1.0.0',
+        throttle: {
+            onRateLimit: (retryAfter, options) => {
+                if (options.request.retryCount === 0) {
+                    console.log(`Request quota exhausted for request ${options.url}`)
+                    return true
+                }
+            },
+            onSecondaryRateLimit: (retryAfter, options) => {
+                console.log(`Abuse detected for request ${options.url}`)
+                return true
+            }
+        }
+    }),
+    oauth: {clientId: null, clientSecret: null},
     webhooks: {
         secret: appSecret
     }
@@ -44,6 +33,17 @@ const octokit = new App({
 const middleware = createNodeMiddleware(octokit)
 const app = express()
 app.use(middleware)
+
+const retrieveRequiredChecks = async (properties) => {
+    const requiredChecks = []
+    for (const [_key, value] of Object.entries(properties)) {
+        const key = _key.trim().toLowerCase()
+        if (key.startsWith('osst_actions_bot')) {
+            requiredChecks.push(value)
+        }
+    }
+    return requiredChecks
+}
 
 const fetchPull = async (octokit, owner, repo, number) => {
     const {data} = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
@@ -66,7 +66,7 @@ const fetchCheck = async (octokit, owner, repo, ref, check) => {
     return data.check_runs[0].check_suite.id
 }
 
-const fetchWorkflowRun = async (octokit, owner, repo, suiteID, ref, sha, runID) => {
+const fetchWorkflowRun = async (octokit, owner, repo, suiteID, ref, sha) => {
     const {data} = await octokit.request('GET /repos/{owner}/{repo}/actions/runs', {
         owner: owner,
         repo: repo,
@@ -87,16 +87,16 @@ const rerunWorkflow = async (octokit, owner, repo, runID) => {
     })
 }
 
-const processRerunRequiredWorkflows = async (octokit, body, owner, repo, number, actor, metadata) => {
+const processRerunRequiredWorkflows = async (octokit, metadata, owner, repo, number, checks) => {
     console.log(`[${metadata}] Retrieving PR information`)
     const pr = await fetchPull(octokit, owner, repo, number)
-    for (const name of requiredChecks) {
+    for (const name of checks) {
         try {
             console.log(`[${metadata}] Retrieving latest check suite for ${name}`)
             const suiteID = await fetchCheck(octokit, owner, repo, pr.head.ref, name)
 
             console.log(`[${metadata}] Retrieving workflow runs for check suite ${suiteID}`)
-            const runID = await fetchWorkflowRun(octokit, owner, repo, suiteID, pr.head.ref, pr.head.sha, pr.id)
+            const runID = await fetchWorkflowRun(octokit, owner, repo, suiteID, pr.head.ref, pr.head.sha)
 
             console.log(`[${metadata}] Rerunning workflow run ${runID}`)
             await rerunWorkflow(octokit, owner, repo, runID)
@@ -113,23 +113,28 @@ octokit.webhooks.on('issue_comment.created', async ({octokit, payload}) => {
         const repo = payload.repository.name
         const issueNumber = payload.issue.number
         const actor = payload.comment.user.login
-        const metadata = `${actor}:${owner}:${repo}:${issueNumber}:${payload.comment.id}`
-        if (payload.issue.pull_request) {
-            console.log(`[${metadata}] Received command: '${body}' from ${actor}`)
-            if (body.startsWith('/actions-bot')) {
-                console.log(`[${metadata}] Processing command`)
-                if (body.includes('rerun-required-workflows')) {
-                    console.log(`[${metadata}] Processing rerun-required-workflows`)
-                    await processRerunRequiredWorkflows(octokit, body, owner, repo, issueNumber, actor, metadata)
-                } else {
-                    console.log(`[${metadata}] Unknown command`)
-                }
-            }
-        } else {
-            console.log(`[${metadata}] Issue is not a pull request`)
+        const commentID = payload.comment.id
+        const metadata = `${actor}:${owner}:${repo}:${issueNumber}:${commentID}`
+
+        if (!payload.issue.pull_request) {
+            return console.log(`[${metadata}] Issue is not a pull request`)
+
         }
+        if (!body.startsWith('/actions-bot') || !body.includes('rerun-required-workflows')) {
+            return console.log(`[${metadata}] Not a command: '${body}'`)
+        }
+
+        console.log(`[${metadata}] Processing command '${body}'`)
+        const properties = payload.repository.custom_properties
+        console.log(`[${metadata}] Processing properties: ${JSON.stringify(properties)}`)
+        const checks = await retrieveRequiredChecks(properties)
+        if (checks.length === 0) {
+            return console.log(`[${metadata}] No required checks found`)
+        }
+        console.log(`[${metadata}] Processing rerun-required-workflows`)
+        await processRerunRequiredWorkflows(octokit, metadata, owner, repo, issueNumber, checks)
     } catch (e) {
-        console.log(`Error: ${e.message}`)
+        console.error(`Error: ${e.message}`)
     }
 })
 
