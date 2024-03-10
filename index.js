@@ -5,9 +5,9 @@ import {paginateRest} from '@octokit/plugin-paginate-rest'
 import {throttling} from '@octokit/plugin-throttling'
 import {retry} from '@octokit/plugin-retry'
 
-const port = process.env.OSST_ACTIONS_BOT_PORT || 3000
+const port = process.env.OSST_ACTIONS_BOT_PORT || process.env.PORT || 3000
 const appID = process.env.OSST_ACTIONS_BOT_APP_ID
-const appPrivateKey = process.env.OSST_ACTIONS_BOT_APP_PRIVATE_KEY
+const appPrivateKey = Buffer.from(process.env.OSST_ACTIONS_BOT_APP_PRIVATE_KEY, 'base64').toString('utf-8')
 const appSecret = process.env.OSST_ACTIONS_BOT_APP_WEBHOOK_SECRET
 const requiredChecks = [
     'policy-enforce-pr',
@@ -120,6 +120,8 @@ octokit.webhooks.on('issue_comment.created', async ({octokit, payload}) => {
             if (body.includes('rerun-required-workflows')) {
                 console.log(`[${metadata}] Processing rerun-required-workflows`)
                 await processRerunRequiredWorkflows(octokit, body, owner, repo, issueNumber, actor, metadata)
+            } else {
+                console.log(`[${metadata}] Unknown command`)
             }
         }
     } catch (e) {
