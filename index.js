@@ -1,9 +1,9 @@
 import express from 'express'
 import {Octokit} from '@octokit/core'
+import {App, createNodeMiddleware} from '@octokit/app'
 import {paginateRest} from '@octokit/plugin-paginate-rest'
 import {throttling} from '@octokit/plugin-throttling'
 import {retry} from '@octokit/plugin-retry'
-import {App, createNodeMiddleware} from '@octokit/app'
 
 const port = process.env.OSST_ACTIONS_BOT_PORT || 3000
 const appID = process.env.OSST_ACTIONS_BOT_APP_ID
