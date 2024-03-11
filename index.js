@@ -162,9 +162,16 @@ const hydrateOctokit = async (req, res, next) => {
     return next()
 }
 
+const verifyMembership = async (req, res, next) => {
+    if (req.body.comment.author_association === 'MEMBER') {
+        return next()
+    }
+    return next('User is not a member')
+}
+
 const limiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    limit: 1, // limit each IP to 1 requests per windowMs
+    limit: 10, // limit each IP to 1 requests per windowMs
     keyGenerator: (req) => req.body.issue.node_id,
     handler: (req, res, next, options) => {
         console.log(`[${req.key}] Rate limit exceeded`)
@@ -179,6 +186,7 @@ app.use(limiter)
 app.use(verifyGitHubWebhook)
 app.use(verifyIsPR)
 app.use(verifyIssueCommentCreatedEvent)
+app.use(verifyMembership)
 app.use(verifyCommand)
 app.use(hydrateOctokit)
 
