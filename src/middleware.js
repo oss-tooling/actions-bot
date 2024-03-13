@@ -4,6 +4,7 @@ import {App, Octokit} from "octokit";
 const appID = process.env.OSST_ACTIONS_BOT_APP_ID
 const appPrivateKey = Buffer.from(process.env.OSST_ACTIONS_BOT_APP_PRIVATE_KEY, 'base64').toString('utf-8')
 const appSecret = process.env.OSST_ACTIONS_BOT_APP_WEBHOOK_SECRET
+const debug = process.env.OSST_ACTIONS_BOT_DEBUG === 'true'
 
 const octokit = new App({
     appId: appID,
@@ -28,6 +29,13 @@ const octokit = new App({
         secret: appSecret
     }
 })
+
+export const debugRequest = (req, res, next) => {
+    if (debug) {
+        console.log(req.body)
+    }
+    next()
+}
 
 export const verifyGitHubWebhook = (req, res, next) => {
     const payload = JSON.stringify(req.body)

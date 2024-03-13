@@ -2,6 +2,7 @@ import express from 'express'
 import {limiter} from './src/limiter.js'
 import {processWebhook, respond} from './src/routes.js'
 import {
+    debugRequest,
     hydrateKey,
     hydrateOctokit,
     verifyCommand,
@@ -13,6 +14,7 @@ import {
 
 const app = express()
 app.use(express.json())
+app.use(debugRequest)
 app.use(verifyIsPR)
 app.use(verifyIssueCommentCreatedEvent)
 app.use(hydrateKey)
