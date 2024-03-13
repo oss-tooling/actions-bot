@@ -13,11 +13,11 @@ import {
 
 const app = express()
 app.use(express.json())
+app.use(verifyIsPR)
+app.use(verifyIssueCommentCreatedEvent)
 app.use(hydrateKey)
 app.use(limiter)
 app.use(verifyGitHubWebhook)
-app.use(verifyIsPR)
-app.use(verifyIssueCommentCreatedEvent)
 app.use(verifyMembership)
 app.use(verifyCommand)
 app.use(hydrateOctokit)
