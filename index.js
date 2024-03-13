@@ -1,7 +1,6 @@
 import express from 'express'
 import {limiter} from './src/limiter.js'
 import {processWebhook, respond} from './src/routes.js'
-import {unless} from './src/utils.js'
 import {
     debugRequest,
     hydrateKey,
@@ -15,18 +14,19 @@ import {
 
 const app = express()
 app.use(express.json())
-app.use(unless('/healthz', debugRequest))
-app.use(unless('/healthz', hydrateKey))
-app.use(unless('/healthz', limiter))
-app.use(unless('/healthz', verifyIsPR))
-app.use(unless('/healthz', verifyIssueCommentCreatedEvent))
-app.use(unless('/healthz', verifyGitHubWebhook))
-app.use(unless('/healthz', verifyMembership))
-app.use(unless('/healthz', verifyCommand))
-app.use(unless('/healthz', hydrateOctokit))
 
 app.get('/healthz', respond)
-app.post('/api/github/webhooks', processWebhook)
+app.post('/api/github/webhooks',
+    debugRequest,
+    hydrateKey,
+    limiter,
+    verifyIsPR,
+    verifyIssueCommentCreatedEvent,
+    verifyGitHubWebhook,
+    verifyMembership,
+    verifyCommand,
+    hydrateOctokit,
+    processWebhook)
 
 const main = async () => {
     const port = process.env.OSST_ACTIONS_BOT_PORT || process.env.PORT || 8080
