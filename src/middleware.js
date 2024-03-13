@@ -96,7 +96,10 @@ export const hydrateOctokit = async (req, res, next) => {
 }
 
 export const verifyMembership = async (req, res, next) => {
-    if (req.body.comment.author_association === 'MEMBER') {
+    if (req.body.comment.author_association === 'COLLABORATOR' ||
+        req.body.comment.author_association === 'MEMBER' ||
+        req.body.comment.author_association === 'CONTRIBUTOR' ||
+        req.body.comment.author_association === 'OWNER') {
         return next()
     }
     return next('User is not a member')

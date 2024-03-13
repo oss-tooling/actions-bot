@@ -8,3 +8,13 @@ export const retrieveRequiredChecks = async (properties) => {
     }
     return requiredChecks
 }
+
+export const unless = function (path, middleware) {
+    return function (req, res, next) {
+        if (path === req.path) {
+            return next();
+        } else {
+            return middleware(req, res, next);
+        }
+    };
+}

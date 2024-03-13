@@ -13,6 +13,7 @@ import {
 } from './src/middleware.js'
 
 const app = express()
+app.get('/healthz', respond)
 app.use(express.json())
 app.use(debugRequest)
 app.use(hydrateKey)
@@ -23,9 +24,6 @@ app.use(verifyGitHubWebhook)
 app.use(verifyMembership)
 app.use(verifyCommand)
 app.use(hydrateOctokit)
-
-app.get('/', respond)
-app.get('/healthz', respond)
 app.post('/api/github/webhooks', processWebhook)
 
 const main = async () => {
